@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: msr-financial-engine-postgres
+    environment:
+      POSTGRES_DB: msr_financial_engine
+      POSTGRES_USER: msr_user
+      POSTGRES_PASSWORD: msr_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - msr_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msr_user -d msr_financial_engine"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/MSRFinancialEngine.Api/Dockerfile
+    container_name: msr-financial-engine-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=msr_financial_engine;Username=msr_user;Password=msr_password"
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  msr_postgres_data:

@@ -1,0 +1,27 @@
+## .NET
+bin/
+obj/
+out/
+*.user
+*.suo
+
+## Testes
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+
+## Publicação
+publish/
+*.pubxml
+*.pubxml.user
+
+## Segredos locais (nunca commitar)
+appsettings.*.local.json
+*.env
