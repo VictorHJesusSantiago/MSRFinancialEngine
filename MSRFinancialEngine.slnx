@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MSRFinancialEngine.Api/MSRFinancialEngine.Api.csproj" />
+    <Project Path="src/MSRFinancialEngine.Application/MSRFinancialEngine.Application.csproj" />
+    <Project Path="src/MSRFinancialEngine.Domain/MSRFinancialEngine.Domain.csproj" />
+    <Project Path="src/MSRFinancialEngine.Infrastructure/MSRFinancialEngine.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MSRFinancialEngine.Tests/MSRFinancialEngine.Tests.csproj" />
+  </Folder>
+</Solution>
