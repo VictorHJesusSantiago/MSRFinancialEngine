@@ -1,6 +1,5 @@
 namespace MSRFinancialEngine.Application.Abstractions;
 
-/// <summary>Repositório genérico. Mantém a camada Application sem dependência direta do EF Core.</summary>
 public interface IRepository<T> where T : class
 {
     IQueryable<T> Query();
