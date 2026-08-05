@@ -1,6 +1,5 @@
 namespace MSRFinancialEngine.Domain.Entities;
 
-/// <summary>Modelo interno único para o qual toda transação de qualquer fonte é normalizada.</summary>
 public class CanonicalTransaction
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -17,7 +16,6 @@ public class CanonicalTransaction
     public string? ReferenceDoc { get; set; }
     public string? AccountIdentifier { get; set; }
 
-    /// <summary>Hash de idempotência para evitar reimportação duplicada da mesma transação.</summary>
     public string Hash { get; set; } = string.Empty;
 
     public bool Reconciled { get; set; }
