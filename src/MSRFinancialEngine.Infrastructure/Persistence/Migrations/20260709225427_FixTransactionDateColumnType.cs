@@ -1,14 +1,12 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace MSRFinancialEngine.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class FixTransactionDateColumnType : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<DateTime>(
@@ -20,7 +18,6 @@ namespace MSRFinancialEngine.Infrastructure.Persistence.Migrations
                 oldType: "timestamp with time zone");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<DateTime>(
