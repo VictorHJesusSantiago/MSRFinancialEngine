@@ -4,18 +4,16 @@ using MSRFinancialEngine.Domain.Entities;
 
 namespace MSRFinancialEngine.Application.Matching;
 
-/// <summary>
-/// Para o que sobra após o matching determinístico: combina similaridade textual da
-/// descrição com tolerância de valor/data, gerando um score de confiança de 0.0 a 1.0.
-/// </summary>
 public class FuzzyMatchingStrategy : IMatchingStrategy
 {
     public MatchingRuleType Type => MatchingRuleType.Fuzzy;
 
-    public IEnumerable<MatchAttempt> FindCandidates(IReadOnlyList<CanonicalTransaction> pool, MatchingRule rule)
+    public IEnumerable<MatchAttempt> FindCandidates(MatchingContext context, MatchingRule rule)
     {
         var config = JsonSerializer.Deserialize<FuzzyRuleConfig>(rule.ConfigJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new FuzzyRuleConfig();
+
+        var pool = context.Pool;
 
         for (var i = 0; i < pool.Count; i++)
         {
@@ -27,10 +25,12 @@ public class FuzzyMatchingStrategy : IMatchingStrategy
                 if (a.SourceId == b.SourceId)
                     continue;
 
-                if (!string.Equals(a.CurrencyCode, b.CurrencyCode, StringComparison.OrdinalIgnoreCase))
+                var difference = AmountComparer.Difference(
+                    context, a, b, config.MatchOppositeSigns, config.CrossCurrency);
+                if (difference is null)
                     continue;
 
-                var amountDiff = Math.Abs(a.Amount - b.Amount);
+                var amountDiff = difference.Value;
                 var daysDiff = Math.Abs((a.TransactionDate.Date - b.TransactionDate.Date).TotalDays);
 
                 if (amountDiff > config.ToleranceAmount || daysDiff > config.ToleranceDays)
@@ -38,7 +38,6 @@ public class FuzzyMatchingStrategy : IMatchingStrategy
 
                 var textSimilarity = StringSimilarity.NormalizedSimilarity(a.Description, b.Description);
 
-                // Score combina similaridade textual (peso maior) com proximidade de valor/data.
                 var amountScore = config.ToleranceAmount == 0
                     ? 1.0
                     : 1.0 - (double)(amountDiff / config.ToleranceAmount) * 0.5;
@@ -61,4 +60,8 @@ public class FuzzyRuleConfig
     public double MinScore { get; set; } = 0.75;
     public decimal ToleranceAmount { get; set; } = 0.05m;
     public int ToleranceDays { get; set; } = 3;
+
+    public bool MatchOppositeSigns { get; set; }
+
+    public bool CrossCurrency { get; set; }
 }

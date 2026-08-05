@@ -1,6 +1,5 @@
 namespace MSRFinancialEngine.Application.Matching;
 
-/// <summary>Distância de Levenshtein normalizada em similaridade de 0.0 (nada em comum) a 1.0 (idênticas).</summary>
 public static class StringSimilarity
 {
     public static double NormalizedSimilarity(string a, string b)
