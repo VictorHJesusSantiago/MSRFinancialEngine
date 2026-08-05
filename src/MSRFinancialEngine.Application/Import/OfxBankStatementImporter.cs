@@ -5,10 +5,6 @@ using MSRFinancialEngine.Domain;
 
 namespace MSRFinancialEngine.Application.Import;
 
-/// <summary>
-/// Importador simplificado de extrato bancário em formato OFX (blocos &lt;STMTTRN&gt;).
-/// ConfigJson exemplo: {"defaultCurrency":"BRL"}
-/// </summary>
 public partial class OfxBankStatementImporter : ISourceImporter
 {
     public SourceType SupportedType => SourceType.BankStatementOfx;
@@ -61,7 +57,6 @@ public partial class OfxBankStatementImporter : ISourceImporter
 
     private static DateTime ParseOfxDate(string raw)
     {
-        // Formato OFX: yyyyMMddHHmmss[.xxx][:GMT]
         var digits = new string(raw.TakeWhile(char.IsDigit).ToArray());
         var datePart = digits.Length >= 8 ? digits[..8] : digits;
         return DateTime.ParseExact(datePart, "yyyyMMdd", CultureInfo.InvariantCulture);
