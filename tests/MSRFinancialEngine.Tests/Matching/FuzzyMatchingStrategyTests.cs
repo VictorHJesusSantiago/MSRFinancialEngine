@@ -27,7 +27,7 @@ public class FuzzyMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{\"minScore\":0.6,\"toleranceAmount\":0.05,\"toleranceDays\":3}" };
         var strategy = new FuzzyMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Single(attempts);
         Assert.True(attempts[0].Score >= 0.6);
@@ -44,7 +44,7 @@ public class FuzzyMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{\"minScore\":0.9,\"toleranceAmount\":0.05,\"toleranceDays\":3}" };
         var strategy = new FuzzyMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Empty(attempts);
     }
@@ -60,7 +60,7 @@ public class FuzzyMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{\"minScore\":0.5,\"toleranceAmount\":0.05,\"toleranceDays\":3}" };
         var strategy = new FuzzyMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Empty(attempts);
     }
