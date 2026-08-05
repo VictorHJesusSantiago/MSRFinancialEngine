@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSRFinancialEngine.Application.Abstractions;
 using MSRFinancialEngine.Application.Currency;
@@ -5,10 +7,19 @@ using MSRFinancialEngine.Domain.Entities;
 
 namespace MSRFinancialEngine.Api.Controllers;
 
-public record CreateExchangeRateRequest(string CurrencyCode, string BaseCurrencyCode, DateOnly Date, decimal RateToBase);
-public record ConvertCurrencyRequest(decimal Amount, string CurrencyCode, string BaseCurrencyCode, DateOnly Date);
+public record CreateExchangeRateRequest(
+    [Required, StringLength(3, MinimumLength = 3)] string CurrencyCode,
+    [Required, StringLength(3, MinimumLength = 3)] string BaseCurrencyCode,
+    [Required] DateOnly Date,
+    [Range(0.000001, 1_000_000)] decimal RateToBase);
+public record ConvertCurrencyRequest(
+    decimal Amount,
+    [Required, StringLength(3, MinimumLength = 3)] string CurrencyCode,
+    [Required, StringLength(3, MinimumLength = 3)] string BaseCurrencyCode,
+    [Required] DateOnly Date);
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class ExchangeRatesController : ControllerBase
 {
@@ -24,8 +35,11 @@ public class ExchangeRatesController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ExchangeRate>> GetAll([FromQuery] string? currencyCode) =>
-        Ok(_rates.Query().Where(r => currencyCode == null || r.CurrencyCode == currencyCode).OrderByDescending(r => r.Date).ToList());
+    public ActionResult<PagedResult<ExchangeRate>> GetAll([FromQuery] string? currencyCode, [FromQuery] PageRequest pagination) =>
+        Ok(_rates.Query()
+            .Where(r => currencyCode == null || r.CurrencyCode == currencyCode)
+            .OrderByDescending(r => r.Date)
+            .ToPagedResult(pagination));
 
     [HttpPost]
     public async Task<ActionResult<ExchangeRate>> Create(CreateExchangeRateRequest request, CancellationToken ct)
