@@ -50,7 +50,6 @@ public class CanonicalTransactionConfiguration : IEntityTypeConfiguration<Canoni
         builder.Property(t => t.CurrencyCode).HasMaxLength(3);
         builder.Property(t => t.Description).HasMaxLength(500);
         builder.Property(t => t.Hash).HasMaxLength(64);
-        // Data de negócio sem fuso horário (vem de extratos/ERPs sem timezone) — não usar timestamptz.
         builder.Property(t => t.TransactionDate).HasColumnType("timestamp without time zone");
 
         builder.HasOne(t => t.Company).WithMany(c => c.Transactions).HasForeignKey(t => t.CompanyId).OnDelete(DeleteBehavior.Restrict);
@@ -156,6 +155,53 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Name).HasMaxLength(200);
         builder.Property(u => u.Email).HasMaxLength(200);
+        builder.Property(u => u.ApprovalLimitAmount).HasColumnType("numeric(18,2)");
         builder.HasIndex(u => u.Email).IsUnique();
+        builder.HasIndex(u => u.CompanyId);
+    }
+}
+
+public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
+{
+    public void Configure(EntityTypeBuilder<RefreshToken> builder)
+    {
+        builder.ToTable("refresh_tokens");
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.TokenHash).IsRequired().HasMaxLength(64);
+        builder.Property(t => t.RevokedReason).HasMaxLength(200);
+
+        builder.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(t => t.TokenHash).IsUnique();
+        builder.HasIndex(t => t.UserId);
+    }
+}
+
+public class ImportJobConfiguration : IEntityTypeConfiguration<ImportJob>
+{
+    public void Configure(EntityTypeBuilder<ImportJob> builder)
+    {
+        builder.ToTable("import_jobs");
+        builder.HasKey(j => j.Id);
+        builder.Property(j => j.FileName).HasMaxLength(500);
+        builder.Property(j => j.StagedFilePath).HasMaxLength(1000);
+        builder.Property(j => j.ErrorMessage).HasMaxLength(2000);
+
+        builder.HasOne(j => j.Source).WithMany().HasForeignKey(j => j.SourceId).OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(j => j.SourceId);
+        builder.HasIndex(j => j.Status);
+    }
+}
+
+public class AuditArchiveConfiguration : IEntityTypeConfiguration<AuditArchive>
+{
+    public void Configure(EntityTypeBuilder<AuditArchive> builder)
+    {
+        builder.ToTable("audit_archives");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Location).IsRequired().HasMaxLength(1000);
+        builder.Property(a => a.ContentHash).IsRequired().HasMaxLength(64);
+        builder.HasIndex(a => new { a.FromUtc, a.ToUtc });
     }
 }
