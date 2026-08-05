@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSRFinancialEngine.Application.Abstractions;
 using MSRFinancialEngine.Domain;
@@ -6,6 +7,7 @@ using MSRFinancialEngine.Domain.Entities;
 namespace MSRFinancialEngine.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class MatchCandidatesController : ControllerBase
 {
@@ -17,8 +19,8 @@ public class MatchCandidatesController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<MatchCandidate>> GetAll(
-        [FromQuery] Guid? transactionId, [FromQuery] MatchCandidateStatus? status)
+    public ActionResult<PagedResult<MatchCandidate>> GetAll(
+        [FromQuery] Guid? transactionId, [FromQuery] MatchCandidateStatus? status, [FromQuery] PageRequest pagination)
     {
         var query = _candidates.Query();
         if (transactionId.HasValue)
@@ -26,6 +28,6 @@ public class MatchCandidatesController : ControllerBase
         if (status.HasValue)
             query = query.Where(c => c.Status == status.Value);
 
-        return Ok(query.OrderByDescending(c => c.Score).ToList());
+        return Ok(query.OrderByDescending(c => c.Score).ToPagedResult(pagination));
     }
 }

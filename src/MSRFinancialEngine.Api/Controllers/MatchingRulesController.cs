@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSRFinancialEngine.Application.Abstractions;
 using MSRFinancialEngine.Application.Matching;
@@ -6,9 +8,15 @@ using MSRFinancialEngine.Domain.Entities;
 
 namespace MSRFinancialEngine.Api.Controllers;
 
-public record CreateMatchingRuleRequest(Guid CompanyId, string Name, MatchingRuleType Type, string ConfigJson, int Priority);
+public record CreateMatchingRuleRequest(
+    [Required] Guid CompanyId,
+    [Required, MaxLength(200)] string Name,
+    [Required] MatchingRuleType Type,
+    string ConfigJson,
+    [Range(0, 10_000)] int Priority);
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class MatchingRulesController : ControllerBase
 {
@@ -45,6 +53,7 @@ public class MatchingRulesController : ControllerBase
 }
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class MatchingController : ControllerBase
 {
@@ -55,7 +64,6 @@ public class MatchingController : ControllerBase
         _engine = engine;
     }
 
-    /// <summary>Executa o motor de matching para todas as transações não reconciliadas da empresa.</summary>
     [HttpPost("run/{companyId:guid}")]
     public async Task<ActionResult<MatchingRunResult>> Run(Guid companyId, CancellationToken ct) =>
         Ok(await _engine.RunForCompanyAsync(companyId, ct));
