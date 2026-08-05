@@ -1,6 +1,5 @@
 namespace MSRFinancialEngine.Domain.Entities;
 
-/// <summary>Payload bruto exatamente como veio da fonte, antes de qualquer normalização.</summary>
 public class RawTransaction
 {
     public Guid Id { get; set; } = Guid.NewGuid();
