@@ -28,6 +28,8 @@ services:
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=msr_financial_engine;Username=msr_user;Password=msr_password"
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      Jwt__SigningKey: "${JWT_SIGNING_KEY:-desenvolvimento-chave-local-nao-use-em-producao}"
+      SeedAdmin__Password: "${SEED_ADMIN_PASSWORD:-Admin@123456}"
     ports:
       - "8080:8080"
 
