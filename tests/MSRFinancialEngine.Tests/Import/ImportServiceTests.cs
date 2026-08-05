@@ -28,7 +28,7 @@ public class ImportServiceTests
 
         var factory = new SourceImporterFactory(new ISourceImporter[] { new CsvBankStatementImporter() });
         var auditService = new AuditService(auditRepo);
-        var importService = new ImportService(factory, sourceRepo, rawRepo, canonicalRepo, auditService, unitOfWork);
+        var importService = new ImportService(factory, sourceRepo, rawRepo, canonicalRepo, auditService, TestMetrics.Create(), unitOfWork);
 
         var csv = "Date,Amount,Currency,Description,Reference,Account\n" +
                   "2026-01-10,100.50,BRL,Pagamento Fornecedor,NF-001,CC-123\n";
