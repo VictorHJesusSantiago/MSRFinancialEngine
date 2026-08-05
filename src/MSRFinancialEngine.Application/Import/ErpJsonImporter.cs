@@ -4,10 +4,6 @@ using MSRFinancialEngine.Domain;
 
 namespace MSRFinancialEngine.Application.Import;
 
-/// <summary>
-/// Importador para exportações de ERP em JSON: array de objetos
-/// {"amount":100.0,"currency":"BRL","date":"2026-07-01","description":"...","reference":"...","account":"..."}.
-/// </summary>
 public class ErpJsonImporter : ISourceImporter
 {
     public SourceType SupportedType => SourceType.ErpJson;

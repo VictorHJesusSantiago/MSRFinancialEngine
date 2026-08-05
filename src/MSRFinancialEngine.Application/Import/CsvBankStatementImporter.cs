@@ -4,12 +4,6 @@ using MSRFinancialEngine.Domain;
 
 namespace MSRFinancialEngine.Application.Import;
 
-/// <summary>
-/// Importador de extrato bancário em CSV. Espera cabeçalho com as colunas:
-/// Date,Amount,Currency,Description,Reference,Account (nomes configuráveis via ConfigJson).
-/// ConfigJson exemplo:
-/// {"delimiter":",","dateFormat":"yyyy-MM-dd","hasHeader":true,"defaultCurrency":"BRL"}
-/// </summary>
 public class CsvBankStatementImporter : ISourceImporter
 {
     public SourceType SupportedType => SourceType.BankStatementCsv;
@@ -83,7 +77,6 @@ public class CsvBankStatementImporter : ISourceImporter
 
     private static List<string> SplitCsvLine(string line, string delimiter)
     {
-        // Suporte simples a valores entre aspas contendo o delimitador.
         var result = new List<string>();
         var current = new System.Text.StringBuilder();
         var inQuotes = false;
