@@ -103,8 +103,6 @@ public class ReportService : IReportService
 
     public Task<List<AuditExportEntry>> ExportAuditTrailAsync(DateTime from, DateTime to, CancellationToken ct = default)
     {
-        // Timestamp é armazenado como timestamptz (UTC); normaliza o Kind para evitar
-        // erro do driver Npgsql ao comparar com DateTime de Kind=Unspecified.
         var fromUtc = DateTime.SpecifyKind(from, DateTimeKind.Utc);
         var toUtc = DateTime.SpecifyKind(to, DateTimeKind.Utc);
 
