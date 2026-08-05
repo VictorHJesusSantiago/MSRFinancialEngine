@@ -1,6 +1,5 @@
 namespace MSRFinancialEngine.Domain.Entities;
 
-/// <summary>Registro imutável de auditoria para qualquer ação relevante do sistema.</summary>
 public class AuditEvent
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -10,4 +9,6 @@ public class AuditEvent
     public Guid? UserId { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string DetailsJson { get; set; } = "{}";
+
+    public DateTime? ArchivedAtUtc { get; set; }
 }
