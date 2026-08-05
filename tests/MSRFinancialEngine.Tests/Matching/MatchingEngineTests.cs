@@ -48,17 +48,7 @@ public class MatchingEngineTests
         context.CanonicalTransactions.AddRange(matched1, matched2, orphan);
         await context.SaveChangesAsync();
 
-        var transactionRepo = new EfRepository<CanonicalTransaction>(context);
-        var ruleRepo = new EfRepository<MatchingRule>(context);
-        var candidateRepo = new EfRepository<MatchCandidate>(context);
-        var divergenceRepo = new EfRepository<Divergence>(context);
-        var auditRepo = new EfRepository<AuditEvent>(context);
-        var unitOfWork = new EfUnitOfWork(context);
-
-        var engine = new MatchingEngine(
-            transactionRepo, ruleRepo, candidateRepo, divergenceRepo,
-            new IMatchingStrategy[] { new DeterministicMatchingStrategy(), new FuzzyMatchingStrategy() },
-            new AuditService(auditRepo), unitOfWork);
+        var engine = MatchingEngineFactory.Build(context);
 
         var result = await engine.RunForCompanyAsync(company.Id);
 
