@@ -17,7 +17,6 @@ public class CurrencyConversionService : ICurrencyConversionService
         if (string.Equals(currencyCode, baseCurrencyCode, StringComparison.OrdinalIgnoreCase))
             return amount;
 
-        // Taxa vigente na data: a mais recente com Date <= data solicitada.
         var rate = await Task.FromResult(_exchangeRateRepository.Query()
             .Where(r => r.CurrencyCode == currencyCode && r.BaseCurrencyCode == baseCurrencyCode && r.Date <= date)
             .OrderByDescending(r => r.Date)
