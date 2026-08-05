@@ -3,16 +3,13 @@ using System.Text;
 using System.Text.Json;
 using MSRFinancialEngine.Application.Abstractions;
 using MSRFinancialEngine.Application.Audit;
+using MSRFinancialEngine.Application.Observability;
 using MSRFinancialEngine.Domain.Entities;
 
 namespace MSRFinancialEngine.Application.Import;
 
 public interface IImportService
 {
-    /// <summary>
-    /// Importa e normaliza transações de uma fonte a partir de um stream de conteúdo bruto.
-    /// Retorna a quantidade de transações novas importadas (duplicatas por hash são ignoradas).
-    /// </summary>
     Task<ImportResult> ImportAsync(Guid sourceId, Stream content, CancellationToken ct = default);
 }
 
@@ -30,6 +27,7 @@ public class ImportService : IImportService
     private readonly IRepository<RawTransaction> _rawTransactionRepository;
     private readonly IRepository<CanonicalTransaction> _canonicalTransactionRepository;
     private readonly IAuditService _auditService;
+    private readonly EngineMetrics _metrics;
     private readonly IUnitOfWork _unitOfWork;
 
     public ImportService(
@@ -38,6 +36,7 @@ public class ImportService : IImportService
         IRepository<RawTransaction> rawTransactionRepository,
         IRepository<CanonicalTransaction> canonicalTransactionRepository,
         IAuditService auditService,
+        EngineMetrics metrics,
         IUnitOfWork unitOfWork)
     {
         _importerFactory = importerFactory;
@@ -45,6 +44,7 @@ public class ImportService : IImportService
         _rawTransactionRepository = rawTransactionRepository;
         _canonicalTransactionRepository = canonicalTransactionRepository;
         _auditService = auditService;
+        _metrics = metrics;
         _unitOfWork = unitOfWork;
     }
 
@@ -52,6 +52,10 @@ public class ImportService : IImportService
     {
         var source = await _sourceRepository.GetByIdAsync(sourceId, ct)
             ?? throw new InvalidOperationException($"Fonte '{sourceId}' não encontrada.");
+
+        if (!source.Active)
+            throw new InvalidOperationException(
+                $"A fonte '{source.Name}' está desativada e não aceita novas importações.");
 
         var importer = _importerFactory.GetImporter(source.Type);
         var parsed = importer.Parse(content, source.ConfigJson);
@@ -103,6 +107,8 @@ public class ImportService : IImportService
             new { result.TotalParsed, result.Imported, result.Duplicates }, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        _metrics.TransactionsImported(result.Imported, source.CompanyId);
         return result;
     }
 
