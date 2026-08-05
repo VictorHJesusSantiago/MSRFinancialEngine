@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MSRFinancialEngine.Application.Abstractions;
 using MSRFinancialEngine.Domain.Entities;
@@ -5,6 +6,7 @@ using MSRFinancialEngine.Domain.Entities;
 namespace MSRFinancialEngine.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class TransactionsController : ControllerBase
 {
@@ -16,14 +18,14 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<CanonicalTransaction>> GetAll(
-        [FromQuery] Guid companyId, [FromQuery] bool? reconciled)
+    public ActionResult<PagedResult<CanonicalTransaction>> GetAll(
+        [FromQuery] Guid companyId, [FromQuery] bool? reconciled, [FromQuery] PageRequest pagination)
     {
         var query = _transactions.Query().Where(t => t.CompanyId == companyId);
         if (reconciled.HasValue)
             query = query.Where(t => t.Reconciled == reconciled.Value);
 
-        return Ok(query.OrderByDescending(t => t.TransactionDate).ToList());
+        return Ok(query.OrderByDescending(t => t.TransactionDate).ToPagedResult(pagination));
     }
 
     [HttpGet("{id:guid}")]
