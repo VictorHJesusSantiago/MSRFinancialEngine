@@ -28,7 +28,7 @@ public class DeterministicMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{\"toleranceAmount\":0,\"toleranceDays\":0}" };
         var strategy = new DeterministicMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Single(attempts);
         Assert.Equal(1.0, attempts[0].Score);
@@ -44,7 +44,7 @@ public class DeterministicMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{}" };
         var strategy = new DeterministicMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Empty(attempts);
     }
@@ -60,7 +60,7 @@ public class DeterministicMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{\"toleranceAmount\":0,\"toleranceDays\":0}" };
         var strategy = new DeterministicMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Empty(attempts);
     }
@@ -76,7 +76,7 @@ public class DeterministicMatchingStrategyTests
         var rule = new MatchingRule { ConfigJson = "{\"toleranceAmount\":0,\"toleranceDays\":2}" };
         var strategy = new DeterministicMatchingStrategy();
 
-        var attempts = strategy.FindCandidates(new[] { a, b }, rule).ToList();
+        var attempts = strategy.FindCandidates(MatchingContextFactory.ForSingleCurrency(a, b), rule).ToList();
 
         Assert.Single(attempts);
         Assert.Equal(0.95, attempts[0].Score);
