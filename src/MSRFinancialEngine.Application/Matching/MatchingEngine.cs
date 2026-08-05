@@ -1,5 +1,7 @@
 using MSRFinancialEngine.Application.Abstractions;
 using MSRFinancialEngine.Application.Audit;
+using MSRFinancialEngine.Application.Currency;
+using MSRFinancialEngine.Application.Observability;
 using MSRFinancialEngine.Domain;
 using MSRFinancialEngine.Domain.Entities;
 
@@ -16,13 +18,10 @@ public class MatchingRunResult
     public int AutoApproved { get; set; }
     public int PendingReview { get; set; }
     public int DivergencesCreated { get; set; }
+
+    public int MissingExchangeRates { get; set; }
 }
 
-/// <summary>
-/// Orquestra as estratégias de matching (determinística primeiro, depois fuzzy, na ordem
-/// de prioridade das regras ativas da empresa) sobre o conjunto de transações não
-/// reconciliadas. Transações que sobram sem candidato viram divergências.
-/// </summary>
 public class MatchingEngine : IMatchingEngine
 {
     private const double AutoApproveThreshold = 0.98;
@@ -31,7 +30,11 @@ public class MatchingEngine : IMatchingEngine
     private readonly IRepository<MatchingRule> _ruleRepository;
     private readonly IRepository<MatchCandidate> _candidateRepository;
     private readonly IRepository<Divergence> _divergenceRepository;
+    private readonly IRepository<Company> _companyRepository;
     private readonly IReadOnlyDictionary<MatchingRuleType, IMatchingStrategy> _strategies;
+    private readonly ICurrencyConversionService _currencyConversionService;
+    private readonly IMatchingRunGuard _runGuard;
+    private readonly EngineMetrics _metrics;
     private readonly IAuditService _auditService;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -40,7 +43,11 @@ public class MatchingEngine : IMatchingEngine
         IRepository<MatchingRule> ruleRepository,
         IRepository<MatchCandidate> candidateRepository,
         IRepository<Divergence> divergenceRepository,
+        IRepository<Company> companyRepository,
         IEnumerable<IMatchingStrategy> strategies,
+        ICurrencyConversionService currencyConversionService,
+        IMatchingRunGuard runGuard,
+        EngineMetrics metrics,
         IAuditService auditService,
         IUnitOfWork unitOfWork)
     {
@@ -48,14 +55,36 @@ public class MatchingEngine : IMatchingEngine
         _ruleRepository = ruleRepository;
         _candidateRepository = candidateRepository;
         _divergenceRepository = divergenceRepository;
+        _companyRepository = companyRepository;
         _strategies = strategies.ToDictionary(s => s.Type);
+        _currencyConversionService = currencyConversionService;
+        _runGuard = runGuard;
+        _metrics = metrics;
         _auditService = auditService;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<MatchingRunResult> RunForCompanyAsync(Guid companyId, CancellationToken ct = default)
     {
+        await using var runLock = await _runGuard.TryAcquireAsync(companyId, ct)
+            ?? throw new MatchingAlreadyRunningException(companyId);
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var result = await RunInternalAsync(companyId, ct);
+        stopwatch.Stop();
+
+        _metrics.MatchingCompleted(companyId, result.AutoApproved, result.DivergencesCreated,
+            result.MissingExchangeRates, stopwatch.Elapsed.TotalMilliseconds);
+
+        return result;
+    }
+
+    private async Task<MatchingRunResult> RunInternalAsync(Guid companyId, CancellationToken ct)
+    {
         var result = new MatchingRunResult();
+
+        var company = await _companyRepository.GetByIdAsync(companyId, ct)
+            ?? throw new InvalidOperationException($"Empresa '{companyId}' não encontrada.");
 
         var rules = _ruleRepository.Query()
             .Where(r => r.CompanyId == companyId && r.Active)
@@ -68,6 +97,11 @@ public class MatchingEngine : IMatchingEngine
 
         result.TransactionsConsidered = unreconciled.Count;
 
+        var baseAmounts = await ResolveBaseAmountsAsync(unreconciled, company.BaseCurrencyCode, ct);
+        result.MissingExchangeRates = baseAmounts.Count(kv => kv.Value is null);
+
+        var context = new MatchingContext(unreconciled, baseAmounts, company.BaseCurrencyCode);
+
         var matchedIds = new HashSet<Guid>();
         var candidatesByTransaction = new Dictionary<Guid, List<MatchAttempt>>();
 
@@ -77,7 +111,9 @@ public class MatchingEngine : IMatchingEngine
                 continue;
 
             var pool = unreconciled.Where(t => !matchedIds.Contains(t.Id)).ToList();
-            var attempts = strategy.FindCandidates(pool, rule).OrderByDescending(a => a.Score).ToList();
+            var attempts = strategy.FindCandidates(context.WithPool(pool), rule)
+                .OrderByDescending(a => a.Score)
+                .ToList();
 
             foreach (var attempt in attempts)
             {
@@ -116,8 +152,6 @@ public class MatchingEngine : IMatchingEngine
             }
         }
 
-        // Transações que ainda não foram casadas: geram MatchCandidate pendente (se houver
-        // algum candidato abaixo do limiar de auto-aprovação) e uma Divergence.
         foreach (var transaction in unreconciled.Where(t => !matchedIds.Contains(t.Id)))
         {
             candidatesByTransaction.TryGetValue(transaction.Id, out var attempts);
@@ -146,11 +180,7 @@ public class MatchingEngine : IMatchingEngine
                 result.PendingReview++;
             }
 
-            var reason = distinctAttempts.Count == 0
-                ? DivergenceReason.NoCandidate
-                : distinctAttempts.Count > 1
-                    ? DivergenceReason.MultipleCandidates
-                    : DivergenceReason.AmountOutOfTolerance;
+            var reason = DivergenceReasonAnalyzer.Analyze(transaction, context, distinctAttempts);
 
             var divergence = new Divergence
             {
@@ -162,11 +192,42 @@ public class MatchingEngine : IMatchingEngine
             result.DivergencesCreated++;
 
             await _auditService.LogAsync(nameof(Divergence), divergence.Id, "Created", null,
-                new { transaction.Id, Reason = reason.ToString() }, ct);
+                new { TransactionId = transaction.Id, Reason = reason.ToString() }, ct);
         }
 
         await _unitOfWork.SaveChangesAsync(ct);
         return result;
+    }
+
+    private async Task<Dictionary<Guid, decimal?>> ResolveBaseAmountsAsync(
+        IReadOnlyList<CanonicalTransaction> transactions, string baseCurrencyCode, CancellationToken ct)
+    {
+        var baseAmounts = new Dictionary<Guid, decimal?>(transactions.Count);
+
+        foreach (var transaction in transactions)
+        {
+            if (string.Equals(transaction.CurrencyCode, baseCurrencyCode, StringComparison.OrdinalIgnoreCase))
+            {
+                baseAmounts[transaction.Id] = transaction.Amount;
+                continue;
+            }
+
+            try
+            {
+                baseAmounts[transaction.Id] = await _currencyConversionService.ConvertToBaseAsync(
+                    transaction.Amount,
+                    transaction.CurrencyCode,
+                    baseCurrencyCode,
+                    DateOnly.FromDateTime(transaction.TransactionDate),
+                    ct);
+            }
+            catch (InvalidOperationException)
+            {
+                baseAmounts[transaction.Id] = null;
+            }
+        }
+
+        return baseAmounts;
     }
 
     private static void Track(Dictionary<Guid, List<MatchAttempt>> map, Guid transactionId, MatchAttempt attempt)

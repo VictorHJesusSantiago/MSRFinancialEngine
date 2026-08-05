@@ -10,14 +10,9 @@ public class MatchAttempt
     public required double Score { get; init; }
 }
 
-/// <summary>
-/// Estratégia de matching plugável. Cada MatchingRuleType tem uma implementação própria,
-/// permitindo adicionar novas estratégias sem alterar o MatchingEngine.
-/// </summary>
 public interface IMatchingStrategy
 {
     MatchingRuleType Type { get; }
 
-    /// <summary>Encontra tentativas de pareamento dentro do conjunto de transações não reconciliadas.</summary>
-    IEnumerable<MatchAttempt> FindCandidates(IReadOnlyList<CanonicalTransaction> pool, MatchingRule rule);
+    IEnumerable<MatchAttempt> FindCandidates(MatchingContext context, MatchingRule rule);
 }
