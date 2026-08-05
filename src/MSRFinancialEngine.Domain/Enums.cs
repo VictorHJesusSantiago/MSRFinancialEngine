@@ -5,7 +5,8 @@ public enum SourceType
     BankStatementCsv,
     BankStatementOfx,
     ErpJson,
-    InvoiceXmlNfe
+    InvoiceXmlNfe,
+    BankStatementMt940
 }
 
 public enum MatchingRuleType
@@ -44,4 +45,15 @@ public enum ApprovalDecisionType
     AcceptSuggestion,
     ManualMatch,
     MarkNotReconcilable
+}
+
+public enum UserRole
+{
+    Viewer,
+
+    Analyst,
+
+    Approver,
+
+    Admin
 }
